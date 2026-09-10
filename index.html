@@ -1511,14 +1511,14 @@ async function markDiambil(row, catatan, petugas, focusId){
   // Ambil langsung dari field input kalau parameter petugas kosong
   if(!petugas){
     petugas = el(focusId).value.trim();
-  }
+}
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
   if(!petugas){
     alert('Pilih dulu nama petugas yang menyerahkan sebelum menandai.');
     el(focusId).focus();
     return;
-  }
+}
   // Sinkronkan ke cfg
   if(focusId === 'fPetugasGrupAktif'){ cfg.petugasGrupAktif = petugas; }
   else { cfg.petugasServahAktif = petugas; }
