@@ -675,9 +675,22 @@ async function apiGet(action, extra){
       return { ok:true, data: (r.data || []).map(mapOut), total: r.count || 0, limit: lim };
     }
     case 'getObatList': {
-      const r = await sb.from('obat_master').select('nama_obat').eq('is_active', true).order('nama_obat');
-      if(r.error) return {ok:false, error:r.error.message};
-      return { ok:true, data: (r.data || []).map(x => x.nama_obat) };
+  let all = [];
+  let from = 0;
+  const PAGE = 1000;
+  while(true){
+    const r = await sb.from('obat_master')
+      .select('nama_obat')
+      .eq('is_active', true)
+      .order('nama_obat')
+      .range(from, from + PAGE - 1);
+    if(r.error) return {ok:false, error:r.error.message};
+    const chunk = (r.data || []).map(x => x.nama_obat);
+    all = all.concat(chunk);
+    if(chunk.length < PAGE) break;
+    from += PAGE;
+  }
+  return { ok:true, data: all };
     }
     case 'getPetugasList': {
       const r = await sb.from('petugas_master').select('nama').eq('is_active', true).order('nama');
