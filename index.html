@@ -166,7 +166,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 
   <div id="mainPanel" style="display:none;">
 
-    <!-- SIDEBAR KIRI -->
     <div class="sidebar">
       <button class="menu-item active" data-tab="wa">📨 Notifikasi WA</button>
       <button class="menu-item" data-tab="serah">💊 Penyerahan Obat</button>
@@ -179,7 +178,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 
     <div class="content">
 
-      <!-- TAB WA -->
       <div class="tab-panel active" id="tabWA">
         <div class="wa-split">
           <div class="wa-left">
@@ -254,7 +252,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB PENYERAHAN -->
       <div class="tab-panel" id="tabServah">
         <div class="wa-split">
           <div class="wa-left">
@@ -295,7 +292,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB RIWAYAT -->
       <div class="tab-panel" id="tabRiwayat">
         <div class="card" style="padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
           <label style="margin:0 0 8px">Cari riwayat janji</label>
@@ -328,7 +324,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB REKAP -->
       <div class="tab-panel" id="tabRekap">
         <div class="card" style="padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
           <label style="margin:0 0 8px">Rekapan obat yang belum diambil pasien</label>
@@ -346,7 +341,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB REKAP B -->
       <div class="tab-panel" id="tabRekapB">
         <div class="card" style="padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
           <label style="margin:0 0 8px">Rekapan obat untuk pasien yang belum dikirimi notifikasi WA</label>
@@ -364,7 +358,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB GRUP WA -->
       <div class="tab-panel" id="tabGrup">
         <div class="wa-split">
           <div class="wa-left">
@@ -405,7 +398,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB TANGGAL -->
       <div class="tab-panel" id="tabTanggal">
         <div class="card" style="padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
           <label style="margin:0 0 8px;font-weight:600;">Pilih tanggal janji</label>
@@ -437,7 +429,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 
 <footer class="note" id="footerNote"></footer>
 
-<!-- Modal Edit -->
 <div class="modal-bg" id="editModal">
   <div class="modal">
     <h3>Edit Data Pasien</h3>
@@ -473,7 +464,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
   </div>
 </div>
 
-<!-- Modal Pola -->
 <div class="modal-bg" id="patternsModal">
   <div class="modal" style="max-width:680px;">
     <h3>Pola Pesan Broadcast (Rotasi Otomatis)</h3>
@@ -490,7 +480,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
   </div>
 </div>
 
-<!-- Modal Detail Rekap -->
 <div class="modal-bg" id="rekapDetailModal">
   <div class="modal" style="max-width:720px;">
     <h3 id="rekapDetailTitle">Detail Obat</h3>
@@ -675,27 +664,40 @@ async function apiGet(action, extra){
       return { ok:true, data: (r.data || []).map(mapOut), total: r.count || 0, limit: lim };
     }
     case 'getObatList': {
-  let all = [];
-  let from = 0;
-  const PAGE = 1000;
-  while(true){
-    const r = await sb.from('obat_master')
-      .select('nama_obat')
-      .eq('is_active', true)
-      .order('nama_obat')
-      .range(from, from + PAGE - 1);
-    if(r.error) return {ok:false, error:r.error.message};
-    const chunk = (r.data || []).map(x => x.nama_obat);
-    all = all.concat(chunk);
-    if(chunk.length < PAGE) break;
-    from += PAGE;
-  }
-  return { ok:true, data: all };
+      let all = [];
+      let from = 0;
+      const PAGE = 1000;
+      while(true){
+        const r = await sb.from('obat_master')
+          .select('nama_obat')
+          .eq('is_active', true)
+          .order('nama_obat')
+          .range(from, from + PAGE - 1);
+        if(r.error) return {ok:false, error:r.error.message};
+        const chunk = (r.data || []).map(x => x.nama_obat);
+        all = all.concat(chunk);
+        if(chunk.length < PAGE) break;
+        from += PAGE;
+      }
+      return { ok:true, data: all };
     }
     case 'getPetugasList': {
-      const r = await sb.from('petugas_master').select('nama').eq('is_active', true).order('nama');
-      if(r.error) return {ok:false, error:r.error.message};
-      return { ok:true, data: (r.data || []).map(x => x.nama) };
+      let all = [];
+      let from = 0;
+      const PAGE = 1000;
+      while(true){
+        const r = await sb.from('petugas_master')
+          .select('nama')
+          .eq('is_active', true)
+          .order('nama')
+          .range(from, from + PAGE - 1);
+        if(r.error) return {ok:false, error:r.error.message};
+        const chunk = (r.data || []).map(x => x.nama);
+        all = all.concat(chunk);
+        if(chunk.length < PAGE) break;
+        from += PAGE;
+      }
+      return { ok:true, data: all };
     }
     case 'getClosingText': {
       const r = await sb.from('settings').select('value').eq('key', 'closing').maybeSingle();
@@ -1470,7 +1472,6 @@ async function sendAndMark(row){
     el('fPetugasAktif').focus();
     return;
   }
-  // Validasi: nama harus ada di master petugas
   if(!petugasList.includes(namaPetugas)){
     const lanjut = confirm(
       'Nama "' + namaPetugas + '" tidak ada di daftar petugas.\n\n' +
@@ -1506,20 +1507,19 @@ function skipQueue(row){
   patients.push(item);
   render();
 }
+
 async function markDiambil(row, catatan, petugas, focusId){
   focusId = focusId || 'fPetugasServahAktif';
-  // Ambil langsung dari field input kalau parameter petugas kosong
   if(!petugas){
     petugas = el(focusId).value.trim();
-}
+  }
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
   if(!petugas){
     alert('Pilih dulu nama petugas yang menyerahkan sebelum menandai.');
     el(focusId).focus();
     return;
-}
-  // Sinkronkan ke cfg
+  }
   if(focusId === 'fPetugasGrupAktif'){ cfg.petugasGrupAktif = petugas; }
   else { cfg.petugasServahAktif = petugas; }
   saveCfg();
@@ -1531,14 +1531,7 @@ async function markDiambil(row, catatan, petugas, focusId){
   p.catatanServah = catatan||'';
   render();
 }
-  const r = await apiPost('markDiambil', { row:p.row, name:p.name, obat:p.obat, petugas:petugas, catatan: catatan||'' });
-  if(!r.ok){ alert('Gagal menandai sudah diambil: ' + r.error); return; }
-  p.sudahDiambil = true;
-  p.petugasServah = petugas;
-  p.tglDiambil = new Date().toISOString().slice(0,10);
-  p.catatanServah = catatan||'';
-  render();
-}
+
 async function undoDiambilAction(row){
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
@@ -1632,8 +1625,8 @@ document.addEventListener('click', e=>{
     const container = e.target.closest('tr') || e.target.closest('.queue-board');
     const catatanInput = container ? container.querySelector('.catatan-input, .catatan-servah-input') : null;
     const isGrupContext = !!e.target.closest('#tabGrup');
-    if(isGrupContext) markDiambil(diambil, catatanInput ? catatanInput.value.trim() : '', cfg.petugasGrupAktif, 'fPetugasGrupAktif');
-    else markDiambil(diambil, catatanInput ? catatanInput.value.trim() : '', cfg.petugasServahAktif, 'fPetugasServahAktif');
+    if(isGrupContext) markDiambil(diambil, catatanInput ? catatanInput.value.trim() : '', undefined, 'fPetugasGrupAktif');
+    else markDiambil(diambil, catatanInput ? catatanInput.value.trim() : '', undefined, 'fPetugasServahAktif');
   }
   if(undoDiambil) undoDiambilAction(undoDiambil);
   if(skipServah) skipQueueServah(skipServah);
@@ -1910,9 +1903,7 @@ el('btnSavePatterns').addEventListener('click', ()=>{
   setTimeout(()=> el('patternsMsg').textContent = '', 2000);
 });
 
-// ============================================================
 // ADMIN ACCESS
-// ============================================================
 let _adminClicks = 0, _adminTimer = null;
 el('appTitle').addEventListener('click', ()=>{
   _adminClicks++;
@@ -1930,9 +1921,7 @@ el('appTitle').addEventListener('click', ()=>{
   }
 });
 
-// ============================================================
 // EVENT LISTENERS SETUP PANEL
-// ============================================================
 el('btnTest').addEventListener('click', testConnection);
 el('btnRefresh').addEventListener('click', refreshAll);
 el('btnSettings').addEventListener('click', showSetup);
@@ -1947,9 +1936,7 @@ el('btnToggleToken').addEventListener('click', ()=>{
   el('btnToggleToken').textContent = showing ? '👁 Tampilkan' : '🙈 Sembunyikan';
 });
 
-// ============================================================
 // BOOT OTOMATIS
-// ============================================================
 loadCfg();
 
 (async ()=>{
