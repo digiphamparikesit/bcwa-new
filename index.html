@@ -1454,11 +1454,33 @@ function render(){
 async function sendAndMark(row){
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
-  if(!cfg.petugasAktif){
+  const namaPetugas = el('fPetugasAktif').value.trim();
+  if(!namaPetugas){
     alert('Pilih dulu nama petugas yang sedang mengirim sebelum kirim WA.');
     el('fPetugasAktif').focus();
     return;
   }
+  // Validasi: nama harus ada di master petugas
+  if(!petugasList.includes(namaPetugas)){
+    const lanjut = confirm(
+      'Nama "' + namaPetugas + '" tidak ada di daftar petugas.\n\n' +
+      'Klik OK untuk tetap lanjut, atau Cancel untuk pilih dari daftar.'
+    );
+    if(!lanjut){
+      el('fPetugasAktif').focus();
+      return;
+    }
+  }
+  cfg.petugasAktif = namaPetugas;
+  saveCfg();
+  window.open(waLink(p), '_blank');
+  registerSendUsed();
+  const r = await apiPost('markSent', { row:p.row, name:p.name, obat:p.obat, petugas:namaPetugas });
+  if(!r.ok){ alert('Gagal menandai terkirim: ' + r.error); return; }
+  p.dihubungi = new Date().toISOString().slice(0,10);
+  p.petugasWA = namaPetugas;
+  render();
+}
   window.open(waLink(p), '_blank');
   registerSendUsed();
   const r = await apiPost('markSent', { row:p.row, name:p.name, obat:p.obat, petugas:cfg.petugasAktif });
