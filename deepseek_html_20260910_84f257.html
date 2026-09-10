@@ -17,7 +17,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-u
 h1,h2,h3,.display{font-family:'Space Grotesk',system-ui,sans-serif;}
 .mono{font-family:'IBM Plex Mono',monospace;}
 .topbar{background:var(--teal-dark);color:#EAF3F1;padding:18px 24px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;border-bottom:4px solid var(--amber);flex-shrink:0;}
-.topbar h1{margin:0;font-size:1.15rem;font-weight:600;}
+.topbar h1{margin:0;font-size:1.15rem;font-weight:600;cursor:default;user-select:none;}
 .topbar .sub{font-size:.75rem;color:#9FC1BC;margin-top:2px;}
 .stats-strip{display:flex;gap:22px;}
 .stat{text-align:center;}
@@ -41,7 +41,6 @@ button{font-family:'Inter';cursor:pointer;border:none;border-radius:8px;font-wei
 .setup-card{max-width:640px;margin:40px auto;overflow-y:auto;max-height:100%;}
 .setup-card h2{margin:0 0 6px;font-size:1.2rem;}
 .setup-card p{color:var(--muted);font-size:.85rem;line-height:1.55;}
-.setup-card ol{color:var(--muted);font-size:.83rem;line-height:1.7;padding-left:20px;}
 label{display:block;font-size:.78rem;font-weight:600;margin:14px 0 5px;}
 input[type=text],input[type=password],input[type=number],input[type=date],textarea,select{
   width:100%;border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;font-family:'Inter';font-size:.85rem;
@@ -80,8 +79,6 @@ details.addform summary{padding:10px 18px;cursor:pointer;font-weight:600;font-si
 .ac-list div{padding:8px 12px;font-size:.83rem;cursor:pointer;}
 .ac-list div:hover{background:#EEF3F1;}
 
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
-.search-input{flex:1;min-width:200px;}
 .table-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow-x:auto;flex:1;}
 table{width:100%;border-collapse:collapse;font-size:.83rem;}
 thead th{text-align:left;padding:10px 14px;background:#EEF3F1;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;position:sticky;top:0;z-index:5;}
@@ -131,10 +128,13 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 <body>
 
 <div class="topbar">
-  <div><h1>Notifikasi Obat Janji</h1><div class="sub">Farmasi Rawat Jalan — RSUD AM Parikesit · terhubung Supabase</div></div>
+  <div>
+    <h1 id="appTitle">Notifikasi Obat Janji</h1>
+    <div class="sub">Farmasi Rawat Jalan — RSUD AM Parikesit · terhubung Supabase</div>
+  </div>
   <div class="stats-strip" id="statsStrip"></div>
   <div class="actions">
-    <button class="btn-ghost" id="btnSettings">Pengaturan</button>
+    <button class="btn-ghost" id="btnSettings" style="display:none;">Pengaturan</button>
     <button class="btn-ghost" id="btnPatterns">Pola Pesan</button>
     <button class="btn-ghost" id="btnRefresh">Segarkan Data</button>
   </div>
@@ -142,9 +142,9 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 
 <div class="wrap">
 
-  <div id="setupPanel" class="card setup-card">
-    <h2>Hubungkan ke Supabase</h2>
-    <p>Tempel <b>Project URL</b> dan <b>anon public key</b> dari dashboard Supabase (Settings → API). Pastikan tabel sudah dibuat lewat SQL Editor sebelum menguji koneksi.</p>
+  <div id="setupPanel" class="card setup-card" style="display:none;">
+    <h2>Pengaturan Koneksi Supabase</h2>
+    <p>Halaman ini hanya untuk admin. Jangan bagikan PIN ke petugas lain.</p>
     <label>Supabase Project URL</label>
     <input type="text" id="cfgUrl" placeholder="https://xxxxx.supabase.co">
     <label>Anon Public Key</label>
@@ -154,8 +154,14 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
     </div>
     <div style="margin-top:16px;display:flex;gap:10px;">
       <button class="btn-primary" id="btnTest">Uji Koneksi &amp; Simpan</button>
+      <button class="btn-outline" id="btnCloseSetup">Tutup</button>
     </div>
     <div class="status-msg" id="setupMsg"></div>
+  </div>
+
+  <div id="loadingPanel" class="card setup-card" style="text-align:center;">
+    <h2>Memuat data…</h2>
+    <p>Menghubungkan ke Supabase, mohon tunggu sebentar.</p>
   </div>
 
   <div id="mainPanel" style="display:none;">
@@ -171,7 +177,6 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
       <button class="menu-item" data-tab="tanggal">📅 Tanggal Janji</button>
     </div>
 
-    <!-- KONTEN KANAN -->
     <div class="content">
 
       <!-- TAB WA -->
@@ -184,7 +189,7 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
                 <input type="text" id="fPetugasAktif" placeholder="Ketik nama untuk mencari...">
                 <div class="ac-list" id="acPetugasList"></div>
               </div>
-              <div class="hint">Nama ini akan otomatis tercatat di Supabase (kolom petugas_wa) setiap kali kamu klik "Kirim WhatsApp" — untuk riwayat jika ada komplain pasien.</div>
+              <div class="hint">Nama ini otomatis tercatat di Supabase (kolom petugas_wa) setiap kali klik "Kirim WhatsApp".</div>
             </div>
 
             <div class="queue-board" id="queueBoard"></div>
@@ -259,7 +264,7 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
                 <input type="text" id="fPetugasServahAktif" placeholder="Ketik nama untuk mencari...">
                 <div class="ac-list" id="acPetugasServahList"></div>
               </div>
-              <div class="hint">Nama ini otomatis tercatat ke kolom "petugas_serah" di Supabase setiap kali kamu tandai "Sudah Diambil".</div>
+              <div class="hint">Nama ini otomatis tercatat ke kolom "petugas_serah" setiap kali tandai "Sudah Diambil".</div>
             </div>
 
             <div class="queue-board" id="queueBoardServah"></div>
@@ -323,7 +328,7 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB REKAP OBAT -->
+      <!-- TAB REKAP -->
       <div class="tab-panel" id="tabRekap">
         <div class="card" style="padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
           <label style="margin:0 0 8px">Rekapan obat yang belum diambil pasien</label>
@@ -341,10 +346,10 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB REKAP OBAT B -->
+      <!-- TAB REKAP B -->
       <div class="tab-panel" id="tabRekapB">
         <div class="card" style="padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
-          <label style="margin:0 0 8px">Rekapan obat untuk pasien yang belum dikirimi notifikasi WA (Menunggu)</label>
+          <label style="margin:0 0 8px">Rekapan obat untuk pasien yang belum dikirimi notifikasi WA</label>
           <input type="text" id="searchRekapObatB" class="search-input" placeholder="Cari nama obat..." style="width:100%;">
         </div>
         <div class="wa-right" style="flex:1;">
@@ -359,17 +364,17 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB PENYERAHAN VIA GRUP WA -->
+      <!-- TAB GRUP WA -->
       <div class="tab-panel" id="tabGrup">
         <div class="wa-split">
           <div class="wa-left">
             <div class="card" style="padding:10px 16px;margin-bottom:10px;">
-              <label style="margin:0 0 5px">Petugas yang sedang menyerahkan obat (via Grup WA) hari ini</label>
+              <label style="margin:0 0 5px">Petugas yang sedang menyerahkan obat (via Grup WA)</label>
               <div class="autocomplete">
                 <input type="text" id="fPetugasGrupAktif" placeholder="Ketik nama untuk mencari...">
                 <div class="ac-list" id="acPetugasGrupList"></div>
               </div>
-              <div class="hint">Informasi obat siap diambil sudah disebar lewat Grup WA (di luar aplikasi ini). Tab ini khusus untuk menandai pengambilan — tidak perlu kirim WA individual dulu.</div>
+              <div class="hint">Info obat siap diambil sudah disebar lewat Grup WA. Tab ini untuk menandai pengambilan.</div>
             </div>
 
             <div class="queue-board" id="queueBoardGrup"></div>
@@ -400,7 +405,7 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-      <!-- TAB TANGGAL JANJI -->
+      <!-- TAB TANGGAL -->
       <div class="tab-panel" id="tabTanggal">
         <div class="card" style="padding:14px 16px;margin-bottom:12px;flex-shrink:0;">
           <label style="margin:0 0 8px;font-weight:600;">Pilih tanggal janji</label>
@@ -426,8 +431,8 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
         </div>
       </div>
 
-    </div><!-- end .content -->
-  </div><!-- end #mainPanel -->
+    </div>
+  </div>
 </div>
 
 <footer class="note" id="footerNote"></footer>
@@ -473,8 +478,8 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
   <div class="modal" style="max-width:680px;">
     <h3>Pola Pesan Broadcast (Rotasi Otomatis)</h3>
     <p style="color:var(--muted);font-size:.82rem;line-height:1.5;">
-      Sistem otomatis memakai pola secara <b>berurutan setiap kali kirim WA</b> (Pola 1 → Pola 2 → ... → Pola terakhir → balik lagi ke Pola 1, terus berputar) dari pola yang <b>aktif</b> di bawah.
-      Placeholder: <span class="mono">{nama}</span>, <span class="mono">{obat}</span>, <span class="mono">{signa}</span>, <span class="mono">{closing}</span> (otomatis diisi dari tabel <span class="mono">settings</span>).
+      Sistem otomatis memakai pola secara berurutan setiap kali kirim WA.
+      Placeholder: <span class="mono">{nama}</span>, <span class="mono">{obat}</span>, <span class="mono">{signa}</span>, <span class="mono">{closing}</span>.
     </p>
     <div id="patternsList"></div>
     <div class="status-msg" id="patternsMsg"></div>
@@ -489,7 +494,7 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 <div class="modal-bg" id="rekapDetailModal">
   <div class="modal" style="max-width:720px;">
     <h3 id="rekapDetailTitle">Detail Obat</h3>
-    <p style="color:var(--muted);font-size:.82rem;">Diurutkan dari pasien yang <b>paling lama menunggu</b> di paling atas.</p>
+    <p style="color:var(--muted);font-size:.82rem;">Diurutkan dari pasien yang paling lama menunggu di paling atas.</p>
     <div class="table-wrap" style="max-height:50vh;overflow-y:auto;">
       <table>
         <thead><tr><th>Tgl Masuk</th><th>Pasien</th><th>No. RM</th><th>No. WA</th><th>Poli</th></tr></thead>
@@ -506,11 +511,15 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 const el = id => document.getElementById(id);
 
 // ============================================================
-// KONFIGURASI
+// KONFIGURASI — SUPABASE CREDENTIALS TERSIMPAN DI SINI
 // ============================================================
+const ADMIN_PIN = '2468'; // ← GANTI PIN ADMIN di sini
+
 let cfg = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  // ====== KREDENSIAL SUPABASE (sudah terpasang) ======
+  supabaseUrl: 'https://pomkcdfxktcalmuaxkfu.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvbWtjZGZ4a3RjYWxtdWF4a2Z1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMTY1MTUsImV4cCI6MjEwNDU5MjUxNX0.k3KqIWe7YY6YasQEmzmNEsuLRmVKDgg6V-GK9w4WMto',
+  // ====================================================
   petugasAktif: '',
   petugasServahAktif: '',
   petugasGrupAktif: '',
@@ -534,14 +543,13 @@ let cfg = {
   closing:"sudah tersedia di Apotik Farmasi Rawat Jalan RSUD AM Parikesit, obat bisa diambil di loket penyerahan obat pada jam pelayanan:\npukul 08:00-16:00 WITA\nhari Senin s/d Jumat\nTerima kasih. \ud83d\ude4f\ud83c\udffe"
 };
 
-let sb = null;              // Supabase client
+let sb = null;
 let patients = [];
 const PAGE_SIZE = 10;
 let waPage = 1, servahPage = 1, riwayatPage = 1, rekapPage = 1, rekapBPage = 1, grupPage = 1, tanggalPage = 1;
 let riwayatData = null;
 let obatList = [], petugasList = [];
 
-// State sort
 let waSort = { field:'tgl', dir:'desc' };
 let servahSort = { field:null, dir:null };
 let riwayatSort = { field:null, dir:null };
@@ -551,23 +559,33 @@ let grupSort = { field:null, dir:null };
 let tanggalSort = { field:'tgl', dir:'desc' };
 
 // ============================================================
-// KONFIG: LOAD & SAVE
+// KONFIG LOAD & SAVE
 // ============================================================
 function loadCfg(){
   try{
     const raw = localStorage.getItem('farmasi-app-cfg');
     if(raw){
       const saved = JSON.parse(raw);
-      // Bersihkan properti lama (kalau ada) yang tidak dipakai lagi
+      // URL & Key selalu pakai bawaan kode, bukan cache
+      delete saved.supabaseUrl;
+      delete saved.supabaseAnonKey;
       delete saved.url;
       delete saved.token;
       delete saved.smsTemplate;
       cfg = Object.assign(cfg, saved);
     }
-  }catch(e){ /* localStorage tidak tersedia */ }
+  }catch(e){}
 }
 function saveCfg(){
-  try{ localStorage.setItem('farmasi-app-cfg', JSON.stringify(cfg)); }catch(e){}
+  try{
+    const toSave = {
+      petugasAktif: cfg.petugasAktif,
+      petugasServahAktif: cfg.petugasServahAktif,
+      petugasGrupAktif: cfg.petugasGrupAktif,
+      patterns: cfg.patterns
+    };
+    localStorage.setItem('farmasi-app-cfg', JSON.stringify(toSave));
+  }catch(e){}
 }
 
 // ============================================================
@@ -589,19 +607,16 @@ function initSupabase(){
 }
 
 // ============================================================
-// HELPER: WRAPPER & MAPPER
+// HELPER
 // ============================================================
 function wrap({data, error}){
   if(error) return { ok:false, error: error.message || String(error) };
   return { ok:true, data };
 }
-
 function normWa(raw){
   if(!raw) return '';
   return String(raw).replace(/[^\d]/g,'').replace(/^0/,'62');
 }
-
-// DB (snake_case) -> frontend (camelCase lama)
 function mapOut(p){
   if(!p) return null;
   return {
@@ -627,8 +642,6 @@ function mapOut(p){
     keterangan: p.catatan_serah || ''
   };
 }
-
-// Frontend (camelCase lama) -> DB (snake_case)
 function mapIn(d){
   const out = {};
   if(d.name         !== undefined) out.nama_pasien   = d.name;
@@ -644,18 +657,16 @@ function mapIn(d){
 }
 
 // ============================================================
-// API GET (drop-in pengganti Apps Script)
+// API GET
 // ============================================================
 async function apiGet(action, extra){
   extra = extra || {};
   if(!sb) return { ok:false, error:'Supabase belum terinisialisasi.' };
-
   switch(action){
     case 'ping': {
       const r = await sb.from('patients').select('id').limit(1);
       return r.error ? {ok:false, error:r.error.message} : {ok:true};
     }
-
     case 'getPatients': {
       const off = Number(extra.offset || 0);
       const lim = Number(extra.limit  || 80);
@@ -664,129 +675,77 @@ async function apiGet(action, extra){
         .order('id', { ascending:true })
         .range(off, off + lim - 1);
       if(r.error) return {ok:false, error:r.error.message};
-      return {
-        ok: true,
-        data: (r.data || []).map(mapOut),
-        total: r.count || 0,
-        limit: lim
-      };
+      return { ok:true, data: (r.data || []).map(mapOut), total: r.count || 0, limit: lim };
     }
-
     case 'getObatList': {
-      const r = await sb.from('obat_master')
-        .select('nama_obat')
-        .eq('is_active', true)
-        .order('nama_obat', { ascending:true });
+      const r = await sb.from('obat_master').select('nama_obat').eq('is_active', true).order('nama_obat');
       if(r.error) return {ok:false, error:r.error.message};
       return { ok:true, data: (r.data || []).map(x => x.nama_obat) };
     }
-
     case 'getPetugasList': {
-      const r = await sb.from('petugas_master')
-        .select('nama')
-        .eq('is_active', true)
-        .order('nama', { ascending:true });
+      const r = await sb.from('petugas_master').select('nama').eq('is_active', true).order('nama');
       if(r.error) return {ok:false, error:r.error.message};
       return { ok:true, data: (r.data || []).map(x => x.nama) };
     }
-
     case 'getClosingText': {
-      const r = await sb.from('settings')
-        .select('value')
-        .eq('key', 'closing')
-        .maybeSingle();
+      const r = await sb.from('settings').select('value').eq('key', 'closing').maybeSingle();
       if(r.error) return {ok:false, error:r.error.message};
       return { ok:true, data: (r.data && r.data.value) || '' };
     }
-
     case 'getRiwayatJanji': {
-      const r = await sb.from('patients')
-        .select('*')
-        .not('tgl_diambil', 'is', null)
-        .order('tgl_resep', { ascending:false });
+      const r = await sb.from('patients').select('*').not('tgl_diambil', 'is', null).order('tgl_resep', { ascending:false });
       if(r.error) return {ok:false, error:r.error.message};
       return { ok:true, data: (r.data || []).map(mapOut) };
     }
-
     default:
       return { ok:false, error:'Unknown action: ' + action };
   }
 }
 
 // ============================================================
-// API POST (drop-in pengganti Apps Script)
+// API POST
 // ============================================================
 async function apiPost(action, data){
   data = data || {};
   if(!sb) return { ok:false, error:'Supabase belum terinisialisasi.' };
-
   switch(action){
     case 'addPatient': {
       const r = await sb.from('patients').insert(mapIn(data)).select().single();
       return wrap(r);
     }
-
     case 'editPatient': {
-      const r = await sb.from('patients')
-        .update(mapIn(data))
-        .eq('id', data.row)
-        .select().single();
+      const r = await sb.from('patients').update(mapIn(data)).eq('id', data.row).select().single();
       return wrap(r);
     }
-
     case 'editPhone': {
-      const r = await sb.from('patients')
-        .update({ no_wa: data.wa })
-        .eq('id', data.row);
+      const r = await sb.from('patients').update({ no_wa: data.wa }).eq('id', data.row);
       return wrap(r);
     }
-
     case 'editCatatanPasien': {
-      const r = await sb.from('patients')
-        .update({ catatan_pasien: data.catatan })
-        .eq('id', data.row);
+      const r = await sb.from('patients').update({ catatan_pasien: data.catatan }).eq('id', data.row);
       return wrap(r);
     }
-
     case 'editJmlDiberikan': {
       const jml = (data.jmlDiberikan === '' || data.jmlDiberikan == null) ? null : Number(data.jmlDiberikan);
-      const r = await sb.from('patients')
-        .update({ jml_diberikan: jml })
-        .eq('id', data.row);
+      const r = await sb.from('patients').update({ jml_diberikan: jml }).eq('id', data.row);
       return wrap(r);
     }
-
     case 'editCatatanServah': {
-      const r = await sb.from('patients')
-        .update({ catatan_serah: data.catatan })
-        .eq('id', data.row);
+      const r = await sb.from('patients').update({ catatan_serah: data.catatan }).eq('id', data.row);
       return wrap(r);
     }
-
     case 'markSent': {
-      // Optimistic lock: hanya update jika dihubungi masih NULL
       const r = await sb.from('patients')
-        .update({
-          dihubungi: new Date().toISOString().slice(0,10),
-          petugas_wa: data.petugas
-        })
-        .eq('id', data.row)
-        .is('dihubungi', null)
-        .select();
+        .update({ dihubungi: new Date().toISOString().slice(0,10), petugas_wa: data.petugas })
+        .eq('id', data.row).is('dihubungi', null).select();
       if(r.error) return {ok:false, error:r.error.message};
-      if(!r.data || r.data.length === 0){
-        return {ok:false, error:'Sudah ditandai terkirim oleh petugas lain.'};
-      }
+      if(!r.data || r.data.length === 0) return {ok:false, error:'Sudah ditandai terkirim oleh petugas lain.'};
       return {ok:true, data: r.data[0]};
     }
-
     case 'undoSent': {
-      const r = await sb.from('patients')
-        .update({ dihubungi: null, petugas_wa: null })
-        .eq('id', data.row);
+      const r = await sb.from('patients').update({ dihubungi: null, petugas_wa: null }).eq('id', data.row);
       return wrap(r);
     }
-
     case 'markDiambil': {
       const r = await sb.from('patients')
         .update({
@@ -795,36 +754,32 @@ async function apiPost(action, data){
           tgl_diambil: new Date().toISOString().slice(0,10),
           catatan_serah: data.catatan || null
         })
-        .eq('id', data.row)
-        .eq('sudah_diambil', false)
-        .select();
+        .eq('id', data.row).eq('sudah_diambil', false).select();
       if(r.error) return {ok:false, error:r.error.message};
-      if(!r.data || r.data.length === 0){
-        return {ok:false, error:'Sudah ditandai diambil oleh petugas lain.'};
-      }
+      if(!r.data || r.data.length === 0) return {ok:false, error:'Sudah ditandai diambil oleh petugas lain.'};
       return {ok:true, data: r.data[0]};
     }
-
     case 'undoDiambil': {
       const r = await sb.from('patients')
-        .update({
-          sudah_diambil: false,
-          petugas_serah: null,
-          tgl_diambil: null,
-          catatan_serah: null
-        })
+        .update({ sudah_diambil: false, petugas_serah: null, tgl_diambil: null, catatan_serah: null })
         .eq('id', data.row);
       return wrap(r);
     }
-
     default:
       return { ok:false, error:'Unknown action: ' + action };
   }
 }
 
 // ============================================================
-// KONEKSI TEST
+// BOOT
 // ============================================================
+async function bootMain(){
+  el('setupPanel').style.display = 'none';
+  el('loadingPanel').style.display = 'none';
+  el('mainPanel').style.display = 'flex';
+  await refreshAll();
+}
+
 async function testConnection(){
   const url = el('cfgUrl').value.trim();
   const key = el('cfgToken').value.trim();
@@ -847,35 +802,34 @@ async function testConnection(){
   try{
     const r = await apiGet('ping');
     if(r.ok){
-      msg.textContent = 'Berhasil terhubung ke Supabase!';
+      msg.textContent = 'Berhasil terhubung!';
       msg.classList.add('status-ok');
       saveCfg();
       await bootMain();
     } else {
-      msg.textContent = 'Gagal: ' + r.error + ' — Pastikan tabel patients sudah dibuat & RLS policy sudah aktif.';
+      msg.textContent = 'Gagal: ' + r.error;
       msg.classList.add('status-err');
     }
   }catch(e){
-    msg.textContent = 'Gagal menghubungi Supabase. Cek URL & Anon Key. (' + e.message + ')';
+    msg.textContent = 'Gagal: ' + e.message;
     msg.classList.add('status-err');
   }
-}
-
-async function bootMain(){
-  el('setupPanel').style.display = 'none';
-  el('mainPanel').style.display = 'flex';
-  await refreshAll();
 }
 
 function showSetup(){
   el('setupPanel').style.display = 'block';
   el('mainPanel').style.display = 'none';
+  el('loadingPanel').style.display = 'none';
   el('cfgUrl').value = cfg.supabaseUrl || '';
   el('cfgToken').value = cfg.supabaseAnonKey || '';
 }
+function hideSetup(){
+  el('setupPanel').style.display = 'none';
+  el('mainPanel').style.display = 'flex';
+}
 
 // ============================================================
-// DATA FETCH
+// FETCH DATA
 // ============================================================
 async function fetchAllPatients(){
   let all = [];
@@ -890,7 +844,6 @@ async function fetchAllPatients(){
   }
   return { ok:true, data: all };
 }
-
 async function refreshAll(){
   const [pRes, oRes, gRes, cRes] = await Promise.all([
     fetchAllPatients(),
@@ -900,13 +853,9 @@ async function refreshAll(){
   ]);
   if(pRes.ok) patients = pRes.data;
   else alert('Gagal memuat data pasien: ' + pRes.error);
-  if(oRes.ok){
-    obatList = oRes.data;
-    el('obatCount').textContent = '(' + obatList.length + ' obat)';
-  }
+  if(oRes.ok){ obatList = oRes.data; el('obatCount').textContent = '(' + obatList.length + ' obat)'; }
   if(gRes.ok) petugasList = gRes.data;
   if(cRes.ok && cRes.data) cfg.closing = cRes.data;
-
   el('fPetugasAktif').value = cfg.petugasAktif || '';
   el('fPetugasServahAktif').value = cfg.petugasServahAktif || '';
   el('fPetugasGrupAktif').value = cfg.petugasGrupAktif || '';
@@ -918,7 +867,6 @@ async function refreshAll(){
 // ============================================================
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function getTodayKey(){ return new Date().toISOString().slice(0,10); }
-
 function getDailySendState(){
   try{
     const raw = localStorage.getItem('farmasi-daily-send');
@@ -929,9 +877,6 @@ function getDailySendState(){
 function saveDailySendState(s){ try{ localStorage.setItem('farmasi-daily-send', JSON.stringify(s)); }catch(e){} }
 function getActivePatterns(){ return cfg.patterns.filter(p=>p.aktif); }
 function dailyLimit(){ return getActivePatterns().length; }
-function sisaKirimHariIni(){ return Math.max(0, dailyLimit() - getDailySendState().count); }
-
-// TODO: Untuk multi-device sinkron, ganti dengan RPC next_pola_index(totalActive)
 function getPatternForNextSend(){
   const active = getActivePatterns();
   if(active.length === 0) return { aktif:true, teks:"Assalamualaikum.\nIzin menyampaikan Bpk/Ibu/Sdr {nama} Obat {obat} {closing}" };
@@ -1074,7 +1019,7 @@ function wireSortHeaders(columns, sortState, rerenderFn, resetPageFn){
 }
 
 // ============================================================
-// RENDER: STATS & QUEUE
+// RENDER: STATS
 // ============================================================
 function renderStats(){
   const total = patients.length;
@@ -1090,7 +1035,7 @@ function renderQueue(){
   const pending = patients.filter(p=>!isSent(p));
   const sentCount = patients.length - pending.length;
   const state = getDailySendState();
-  const infoBadge = `<div class="hint" style="margin-top:6px;">Terkirim hari ini: <b>${state.count}</b> pesan (pola berputar 1-${dailyLimit()||1} terus-menerus)</div>`;
+  const infoBadge = `<div class="hint" style="margin-top:6px;">Terkirim hari ini: <b>${state.count}</b> pesan</div>`;
   if(pending.length === 0){
     board.innerHTML = `<div class="queue-count"><b>${sentCount}/${patients.length||0}</b><span>terkirim</span></div><div class="queue-empty"><div class="display">\u2713 Semua pasien sudah dinotifikasi</div><p>Tidak ada antrian tersisa.</p></div>${infoBadge}`;
     return;
@@ -1109,9 +1054,6 @@ function renderQueue(){
     ${infoBadge}`;
 }
 
-// ============================================================
-// RENDER: TABEL WA
-// ============================================================
 function renderTable(){
   const qObat = el('searchInput').value.toLowerCase().trim();
   const qNama = el('searchInputNama').value.toLowerCase().trim();
@@ -1133,7 +1075,7 @@ function renderTable(){
   el('tableBody').innerHTML = pageRows.map(p=>`
     <tr class="${isSent(p)?'sent':''} ${isOverdue(p)?'overdue-row':''}">
       <td><div class="pname">${escapeHtml(p.name)}</div><div class="psub">${p.rm?'RM '+escapeHtml(p.rm):''}</div><div class="psub">${escapeHtml(p.poli)}</div></td>
-      <td><div>${escapeHtml(p.obat)}</div><div class="psub">${escapeHtml(p.signa)}</div>${p.catatanServah?'<div class="psub" style="color:var(--stamp);margin-top:2px;">Catatan penyerahan: '+escapeHtml(p.catatanServah)+'</div>':''}</td>
+      <td><div>${escapeHtml(p.obat)}</div><div class="psub">${escapeHtml(p.signa)}</div>${p.catatanServah?'<div class="psub" style="color:var(--stamp);margin-top:2px;">Catatan: '+escapeHtml(p.catatanServah)+'</div>':''}</td>
       <td class="psub">${p.jmlResep!==''&&p.jmlResep!=null?p.jmlResep:'—'}</td>
       <td>
         <div class="inline-edit">
@@ -1167,9 +1109,6 @@ function renderTable(){
     <button ${waPage>=totalPages?'disabled':''} data-pagenext="wa">Berikutnya ›</button>`;
 }
 
-// ============================================================
-// RENDER: PENYERAHAN
-// ============================================================
 function renderQueueServah(){
   const board = el('queueBoardServah');
   const eligible = patients.filter(isSent);
@@ -1180,7 +1119,7 @@ function renderQueueServah(){
     return;
   }
   if(pending.length === 0){
-    board.innerHTML = `<div class="queue-count"><b>${doneCount}/${eligible.length}</b><span>diambil</span></div><div class="queue-empty"><div class="display">\u2713 Semua obat sudah diserahkan</div><p>Tidak ada antrian penyerahan tersisa.</p></div>`;
+    board.innerHTML = `<div class="queue-count"><b>${doneCount}/${eligible.length}</b><span>diambil</span></div><div class="queue-empty"><div class="display">\u2713 Semua obat sudah diserahkan</div><p>Tidak ada antrian tersisa.</p></div>`;
     return;
   }
   const p = pending[0];
@@ -1219,7 +1158,7 @@ function renderTableServah(){
       <td><div>${escapeHtml(p.obat)}</div><div class="psub">${escapeHtml(p.signa)}</div></td>
       <td class="psub">${p.jmlResep!==''&&p.jmlResep!=null?p.jmlResep:'—'}</td>
       <td>
-        ${isDiambil(p) ? `<div class="psub">${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:'—'} <span title="Terkunci setelah obat diambil">🔒</span></div>` : `
+        ${isDiambil(p) ? `<div class="psub">${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:'—'} <span title="Terkunci">🔒</span></div>` : `
         <div class="inline-edit">
           <input type="number" class="jmldiberikan-input" data-row="${p.row}" value="${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:''}" style="width:64px;">
           <button class="btn-mini undo" data-savejmldiberikan="${p.row}">Simpan</button>
@@ -1229,7 +1168,7 @@ function renderTableServah(){
       <td class="pwa">${p.wa?'+'+p.wa:'—'}</td>
       <td><span class="status-pill status-done">Terkirim</span><div class="psub">${escapeHtml(p.dihubungi||'')}</div></td>
       <td><div>${escapeHtml(p.poli)}</div><div class="psub">${escapeHtml(p.tgl)}</div></td>
-      <td>${isDiambil(p)?'<span class="stamp">DIAMBIL</span><div class="psub">'+escapeHtml(p.petugasServah||'')+(p.tglDiambil?' · '+escapeHtml(p.tglDiambil):'')+'</div>':'<span class="status-pill status-pending">Menunggu diambil</span>'+(isOverdue(p)?'<div class="psub" style="color:var(--stamp);font-weight:600;">⚠ &gt;1 bulan sejak WA dikirim</div>':'')}</td>
+      <td>${isDiambil(p)?'<span class="stamp">DIAMBIL</span><div class="psub">'+escapeHtml(p.petugasServah||'')+(p.tglDiambil?' · '+escapeHtml(p.tglDiambil):'')+'</div>':'<span class="status-pill status-pending">Menunggu diambil</span>'+(isOverdue(p)?'<div class="psub" style="color:var(--stamp);font-weight:600;">⚠ &gt;1 bulan</div>':'')}</td>
       <td>
         <div class="inline-edit">
           <input type="text" class="catatan-servah-input" data-row="${p.row}" value="${escapeHtml(p.catatanServah||'')}" placeholder="Catatan (opsional)" style="width:150px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);font-size:.76rem;">
@@ -1244,9 +1183,6 @@ function renderTableServah(){
     <button ${servahPage>=totalPagesServah?'disabled':''} data-pagenext="servah">Berikutnya ›</button>`;
 }
 
-// ============================================================
-// RENDER: GRUP WA
-// ============================================================
 function renderQueueGrup(){
   const board = el('queueBoardGrup');
   const pending = patients.filter(p=>!isDiambil(p));
@@ -1256,7 +1192,7 @@ function renderQueueGrup(){
     return;
   }
   if(pending.length === 0){
-    board.innerHTML = `<div class="queue-count"><b>${doneCount}/${patients.length}</b><span>diambil</span></div><div class="queue-empty"><div class="display">\u2713 Semua obat sudah diserahkan</div><p>Tidak ada antrian penyerahan tersisa.</p></div>`;
+    board.innerHTML = `<div class="queue-count"><b>${doneCount}/${patients.length}</b><span>diambil</span></div><div class="queue-empty"><div class="display">\u2713 Semua obat sudah diserahkan</div><p>Tidak ada antrian tersisa.</p></div>`;
     return;
   }
   const p = pending[0];
@@ -1295,7 +1231,7 @@ function renderTableGrup(){
       <td><div>${escapeHtml(p.obat)}</div><div class="psub">${escapeHtml(p.signa)}</div></td>
       <td class="psub">${p.jmlResep!==''&&p.jmlResep!=null?p.jmlResep:'—'}</td>
       <td>
-        ${isDiambil(p) ? `<div class="psub">${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:'—'} <span title="Terkunci setelah obat diambil">🔒</span></div>` : `
+        ${isDiambil(p) ? `<div class="psub">${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:'—'} <span title="Terkunci">🔒</span></div>` : `
         <div class="inline-edit">
           <input type="number" class="jmldiberikan-input" data-row="${p.row}" value="${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:''}" style="width:64px;">
           <button class="btn-mini undo" data-savejmldiberikan="${p.row}">Simpan</button>
@@ -1319,9 +1255,6 @@ function renderTableGrup(){
     <button ${grupPage>=totalPagesGrup?'disabled':''} data-pagenext="grup">Berikutnya ›</button>`;
 }
 
-// ============================================================
-// RENDER: RIWAYAT
-// ============================================================
 async function loadRiwayat(){
   el('emptyStateRiwayat').style.display = 'none';
   el('tableBodyRiwayat').innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:var(--muted);">Memuat riwayat...</td></tr>';
@@ -1366,9 +1299,6 @@ function renderRiwayat(){
     <button ${riwayatPage>=totalPagesRiwayat?'disabled':''} data-pagenext="riwayat">Berikutnya ›</button>`;
 }
 
-// ============================================================
-// RENDER: REKAP
-// ============================================================
 function computeRekapObat(){
   const map = {};
   patients.forEach(p=>{
@@ -1397,7 +1327,7 @@ function renderRekap(){
   const pageRows = rows.slice((rekapPage-1)*PAGE_SIZE, rekapPage*PAGE_SIZE);
   el('tableBodyRekap').innerHTML = pageRows.map(r=>`
     <tr class="rekap-row" data-rekapdetail="A" data-rekapobat="${escapeHtml(r.obat)}" style="cursor:pointer;">
-      <td>${escapeHtml(r.obat)} <span class="hint">(klik untuk detail)</span></td>
+      <td>${escapeHtml(r.obat)} <span class="hint">(klik detail)</span></td>
       <td>${r.jumlahPasien}</td>
       <td>${r.totalSisa}</td>
       <td>${escapeHtml(r.tglTerlama||'—')}</td>
@@ -1435,7 +1365,7 @@ function renderRekapB(){
   const pageRows = rows.slice((rekapBPage-1)*PAGE_SIZE, rekapBPage*PAGE_SIZE);
   el('tableBodyRekapB').innerHTML = pageRows.map(r=>`
     <tr class="rekap-row" data-rekapdetail="B" data-rekapobat="${escapeHtml(r.obat)}" style="cursor:pointer;">
-      <td>${escapeHtml(r.obat)} <span class="hint">(klik untuk detail)</span></td>
+      <td>${escapeHtml(r.obat)} <span class="hint">(klik detail)</span></td>
       <td>${r.jumlahPasien}</td>
       <td>${r.totalSisa}</td>
       <td>${escapeHtml(r.tglTerlama||'—')}</td>
@@ -1470,9 +1400,6 @@ document.addEventListener('click', e=>{
   if(row){ openRekapDetail(row.getAttribute('data-rekapobat'), row.getAttribute('data-rekapdetail')); }
 });
 
-// ============================================================
-// RENDER: TANGGAL JANJI
-// ============================================================
 function renderTanggal(){
   const tanggal = el('tanggalFilter').value;
   if(!tanggal){
@@ -1507,9 +1434,6 @@ function renderTanggal(){
     <button ${tanggalPage>=totalPages?'disabled':''} data-pagenext="tanggal">Berikutnya ›</button>`;
 }
 
-// ============================================================
-// RENDER UTAMA
-// ============================================================
 function render(){
   renderStats();
   renderQueue();
@@ -1525,13 +1449,13 @@ function render(){
 }
 
 // ============================================================
-// AKSI: KIRIM & TANDAI
+// AKSI
 // ============================================================
 async function sendAndMark(row){
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
   if(!cfg.petugasAktif){
-    alert('Pilih dulu nama petugas yang sedang mengirim (di bagian atas halaman) sebelum kirim WA.');
+    alert('Pilih dulu nama petugas yang sedang mengirim sebelum kirim WA.');
     el('fPetugasAktif').focus();
     return;
   }
@@ -1558,17 +1482,13 @@ function skipQueue(row){
   patients.push(item);
   render();
 }
-
-// ============================================================
-// AKSI: PENYERAHAN
-// ============================================================
 async function markDiambil(row, catatan, petugas, focusId){
   petugas = petugas !== undefined ? petugas : cfg.petugasServahAktif;
   focusId = focusId || 'fPetugasServahAktif';
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
   if(!petugas){
-    alert('Pilih dulu nama petugas yang menyerahkan (di bagian atas tab ini) sebelum menandai.');
+    alert('Pilih dulu nama petugas yang menyerahkan sebelum menandai.');
     el(focusId).focus();
     return;
   }
@@ -1596,9 +1516,6 @@ function skipQueueServah(row){
   render();
 }
 
-// ============================================================
-// AKSI: SAVE INLINE
-// ============================================================
 async function saveWaInline(row, wa){
   if(!wa){ alert('Nomor WA tidak boleh kosong.'); return; }
   const r = await apiPost('editPhone', { row, wa });
@@ -1634,9 +1551,6 @@ async function saveCatatanServahInline(row, catatan){
   render();
 }
 
-// ============================================================
-// EVENT DELEGATION GLOBAL
-// ============================================================
 document.addEventListener('click', e=>{
   const send = e.target.getAttribute('data-send'),
         undo = e.target.getAttribute('data-undo'),
@@ -1687,7 +1601,6 @@ document.addEventListener('click', e=>{
   if(skipGrup) skipQueueServah(skipGrup);
 });
 
-// Pagination
 document.addEventListener('click', e=>{
   const prev = e.target.getAttribute('data-pageprev'), next = e.target.getAttribute('data-pagenext');
   if(prev === 'wa'){ waPage--; renderTable(); }
@@ -1706,9 +1619,6 @@ document.addEventListener('click', e=>{
   if(next === 'tanggal'){ tanggalPage++; renderTanggal(); }
 });
 
-// ============================================================
-// FILTER & SEARCH EVENT
-// ============================================================
 el('searchInput').addEventListener('input', ()=>{ waPage=1; renderTable(); });
 el('searchInputNama').addEventListener('input', ()=>{ waPage=1; renderTable(); });
 el('filterStatus').addEventListener('change', ()=>{ waPage=1; renderTable(); });
@@ -1731,7 +1641,6 @@ el('btnClearRiwayat').addEventListener('click', ()=>{
   riwayatPage=1; renderRiwayat();
 });
 
-// Wire sort headers
 wireSortHeaders(waColumns, waSort, renderTable, ()=>{ waPage=1; });
 wireSortHeaders(servahColumns, servahSort, renderTableServah, ()=>{ servahPage=1; });
 wireSortHeaders(riwayatColumns, riwayatSort, renderRiwayat, ()=>{ riwayatPage=1; });
@@ -1740,9 +1649,7 @@ wireSortHeaders(rekapBColumns, rekapBSort, renderRekapB, ()=>{ rekapBPage=1; });
 wireSortHeaders(grupColumns, grupSort, renderTableGrup, ()=>{ grupPage=1; });
 wireSortHeaders(tanggalColumns, tanggalSort, renderTanggal, ()=>{ tanggalPage=1; });
 
-// ============================================================
-// SIDEBAR NAVIGASI
-// ============================================================
+// SIDEBAR NAV
 document.querySelectorAll('.sidebar .menu-item').forEach(btn => {
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.sidebar .menu-item').forEach(b => b.classList.remove('active'));
@@ -1762,9 +1669,6 @@ document.querySelectorAll('.sidebar .menu-item').forEach(btn => {
   });
 });
 
-// ============================================================
-// TANGGAL JANJI EVENT
-// ============================================================
 el('btnTampilkanTanggal').addEventListener('click', ()=>{ tanggalPage=1; renderTanggal(); });
 el('btnResetTanggal').addEventListener('click', ()=>{
   el('tanggalFilter').value = new Date().toISOString().slice(0,10);
@@ -1773,10 +1677,7 @@ el('btnResetTanggal').addEventListener('click', ()=>{
 });
 el('tanggalFilter').value = new Date().toISOString().slice(0,10);
 
-// ============================================================
-// AUTCOMPLETE
-// ============================================================
-// Obat (form tambah)
+// AUTOCOMPLETE
 const fObat = el('fObat'), acList = el('acList');
 fObat.addEventListener('input', ()=>{
   const q = fObat.value.toLowerCase().trim();
@@ -1790,7 +1691,6 @@ acList.addEventListener('click', e=>{
   if(v){ fObat.value = v; acList.style.display='none'; }
 });
 
-// Petugas WA
 const fPetugasAktif = el('fPetugasAktif'), acPetugasList = el('acPetugasList');
 fPetugasAktif.addEventListener('input', ()=>{
   const q = fPetugasAktif.value.toLowerCase().trim();
@@ -1805,7 +1705,6 @@ acPetugasList.addEventListener('click', e=>{
   if(v){ fPetugasAktif.value = v; cfg.petugasAktif = v; saveCfg(); acPetugasList.style.display='none'; }
 });
 
-// Petugas Serah
 const fPetugasServahAktif = el('fPetugasServahAktif'), acPetugasServahList = el('acPetugasServahList');
 fPetugasServahAktif.addEventListener('input', ()=>{
   const q = fPetugasServahAktif.value.toLowerCase().trim();
@@ -1820,7 +1719,6 @@ acPetugasServahList.addEventListener('click', e=>{
   if(v){ fPetugasServahAktif.value = v; cfg.petugasServahAktif = v; saveCfg(); acPetugasServahList.style.display='none'; }
 });
 
-// Petugas Grup WA
 const fPetugasGrupAktif = el('fPetugasGrupAktif'), acPetugasGrupList = el('acPetugasGrupList');
 fPetugasGrupAktif.addEventListener('input', ()=>{
   const q = fPetugasGrupAktif.value.toLowerCase().trim();
@@ -1835,7 +1733,6 @@ acPetugasGrupList.addEventListener('click', e=>{
   if(v){ fPetugasGrupAktif.value = v; cfg.petugasGrupAktif = v; saveCfg(); acPetugasGrupList.style.display='none'; }
 });
 
-// Obat edit modal
 const eObat = el('eObat'), acEditObat = el('acEditObat');
 eObat.addEventListener('input', ()=>{
   const q = eObat.value.toLowerCase().trim();
@@ -1858,9 +1755,7 @@ document.addEventListener('click', e=>{
   }
 });
 
-// ============================================================
 // TAMBAH PASIEN
-// ============================================================
 el('btnAddPatient').addEventListener('click', async ()=>{
   const msg = el('addMsg'); msg.className = 'status-msg';
   const data = {
@@ -1893,9 +1788,7 @@ el('btnAddPatient').addEventListener('click', async ()=>{
   }
 });
 
-// ============================================================
 // EDIT MODAL
-// ============================================================
 let editingRow = null;
 function openEditModal(row){
   const p = patients.find(x=>String(x.row) === String(row));
@@ -1946,13 +1839,11 @@ el('btnSaveEdit').addEventListener('click', async ()=>{
   }
 });
 
-// ============================================================
 // PATTERNS MODAL
-// ============================================================
 function renderPatternsModal(){
   const nextPattern = getPatternForNextSend();
   const state = getDailySendState();
-  el('patternsList').innerHTML = `<div class="hint" style="margin-bottom:10px;">Sudah terkirim hari ini: <b>${state.count}</b> pesan (rotasi terus berputar, tidak ada batas)</div>` +
+  el('patternsList').innerHTML = `<div class="hint" style="margin-bottom:10px;">Terkirim hari ini: <b>${state.count}</b> pesan</div>` +
     cfg.patterns.map((p,i)=>`
       <div class="card" style="padding:12px 14px;margin-bottom:10px;${p === nextPattern?'border-color:var(--amber);':''}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -1981,11 +1872,35 @@ el('btnSavePatterns').addEventListener('click', ()=>{
 });
 
 // ============================================================
-// SETUP PANEL & TOPBAR
+// ADMIN ACCESS (klik 5x judul + PIN)
+// ============================================================
+let _adminClicks = 0, _adminTimer = null;
+el('appTitle').addEventListener('click', ()=>{
+  _adminClicks++;
+  clearTimeout(_adminTimer);
+  _adminTimer = setTimeout(()=> _adminClicks = 0, 1500);
+  if(_adminClicks >= 5){
+    _adminClicks = 0;
+    const pin = prompt('Masukkan PIN admin:');
+    if(pin === ADMIN_PIN){
+      el('btnSettings').style.display = 'inline-block';
+      showSetup();
+    } else if(pin !== null){
+      alert('PIN salah.');
+    }
+  }
+});
+
+// ============================================================
+// EVENT LISTENERS SETUP PANEL
 // ============================================================
 el('btnTest').addEventListener('click', testConnection);
 el('btnRefresh').addEventListener('click', refreshAll);
-el('btnSettings').addEventListener('click', ()=>{ showSetup(); });
+el('btnSettings').addEventListener('click', showSetup);
+el('btnCloseSetup').addEventListener('click', ()=>{
+  el('setupPanel').style.display = 'none';
+  if(patients.length > 0 || (sb && cfg.supabaseUrl)) hideSetup();
+});
 el('btnToggleToken').addEventListener('click', ()=>{
   const inp = el('cfgToken');
   const showing = inp.type === 'text';
@@ -1994,16 +1909,31 @@ el('btnToggleToken').addEventListener('click', ()=>{
 });
 
 // ============================================================
-// BOOT
+// BOOT OTOMATIS
 // ============================================================
 loadCfg();
-if(cfg.supabaseUrl && cfg.supabaseAnonKey){
+
+(async ()=>{
+  // Karena kredensial sudah hardcoded, langsung coba connect
   const init = initSupabase();
-  if(init.ok) bootMain();
-  else { showSetup(); el('setupMsg').textContent = init.error; el('setupMsg').className = 'status-msg status-err'; }
-} else {
-  showSetup();
-}
+  if(init.ok){
+    // Sembunyikan setup panel, tampilkan loading
+    el('setupPanel').style.display = 'none';
+    el('loadingPanel').style.display = 'block';
+    try{
+      const ping = await apiGet('ping');
+      if(ping.ok){
+        await bootMain();
+      } else {
+        el('loadingPanel').innerHTML = `<h2>Gagal koneksi ke Supabase</h2><p style="color:var(--stamp);">${escapeHtml(ping.error)}</p><p>Pastikan tabel sudah dibuat. Klik 5x judul untuk buka Pengaturan.</p>`;
+      }
+    }catch(e){
+      el('loadingPanel').innerHTML = `<h2>Gagal koneksi</h2><p style="color:var(--stamp);">${escapeHtml(e.message)}</p><p>Klik 5x judul untuk buka Pengaturan.</p>`;
+    }
+  } else {
+    el('loadingPanel').innerHTML = `<h2>Inisialisasi gagal</h2><p style="color:var(--stamp);">${escapeHtml(init.error)}</p>`;
+  }
+})();
 </script>
 </body>
 </html>
