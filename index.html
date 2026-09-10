@@ -511,15 +511,13 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 const el = id => document.getElementById(id);
 
 // ============================================================
-// KONFIGURASI — SUPABASE CREDENTIALS TERSIMPAN DI SINI
+// KONFIGURASI
 // ============================================================
-const ADMIN_PIN = '2468'; // ← GANTI PIN ADMIN di sini
+const ADMIN_PIN = '2468';
 
 let cfg = {
-  // ====== KREDENSIAL SUPABASE (sudah terpasang) ======
   supabaseUrl: 'https://pomkcdfxktcalmuaxkfu.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvbWtjZGZ4a3RjYWxtdWF4a2Z1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMTY1MTUsImV4cCI6MjEwNDU5MjUxNX0.k3KqIWe7YY6YasQEmzmNEsuLRmVKDgg6V-GK9w4WMto',
-  // ====================================================
   petugasAktif: '',
   petugasServahAktif: '',
   petugasGrupAktif: '',
@@ -566,7 +564,6 @@ function loadCfg(){
     const raw = localStorage.getItem('farmasi-app-cfg');
     if(raw){
       const saved = JSON.parse(raw);
-      // URL & Key selalu pakai bawaan kode, bukan cache
       delete saved.supabaseUrl;
       delete saved.supabaseAnonKey;
       delete saved.url;
@@ -1481,14 +1478,6 @@ async function sendAndMark(row){
   p.petugasWA = namaPetugas;
   render();
 }
-  window.open(waLink(p), '_blank');
-  registerSendUsed();
-  const r = await apiPost('markSent', { row:p.row, name:p.name, obat:p.obat, petugas:cfg.petugasAktif });
-  if(!r.ok){ alert('Gagal menandai terkirim: ' + r.error); return; }
-  p.dihubungi = new Date().toISOString().slice(0,10);
-  p.petugasWA = cfg.petugasAktif;
-  render();
-}
 async function undoSent(row){
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
@@ -1894,7 +1883,7 @@ el('btnSavePatterns').addEventListener('click', ()=>{
 });
 
 // ============================================================
-// ADMIN ACCESS (klik 5x judul + PIN)
+// ADMIN ACCESS
 // ============================================================
 let _adminClicks = 0, _adminTimer = null;
 el('appTitle').addEventListener('click', ()=>{
@@ -1936,10 +1925,8 @@ el('btnToggleToken').addEventListener('click', ()=>{
 loadCfg();
 
 (async ()=>{
-  // Karena kredensial sudah hardcoded, langsung coba connect
   const init = initSupabase();
   if(init.ok){
-    // Sembunyikan setup panel, tampilkan loading
     el('setupPanel').style.display = 'none';
     el('loadingPanel').style.display = 'block';
     try{
