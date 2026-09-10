@@ -1507,8 +1507,11 @@ function skipQueue(row){
   render();
 }
 async function markDiambil(row, catatan, petugas, focusId){
-  petugas = petugas !== undefined ? petugas : cfg.petugasServahAktif;
   focusId = focusId || 'fPetugasServahAktif';
+  // Ambil langsung dari field input kalau parameter petugas kosong
+  if(!petugas){
+    petugas = el(focusId).value.trim();
+  }
   const p = patients.find(x=>String(x.row) === String(row));
   if(!p) return;
   if(!petugas){
@@ -1516,6 +1519,18 @@ async function markDiambil(row, catatan, petugas, focusId){
     el(focusId).focus();
     return;
   }
+  // Sinkronkan ke cfg
+  if(focusId === 'fPetugasGrupAktif'){ cfg.petugasGrupAktif = petugas; }
+  else { cfg.petugasServahAktif = petugas; }
+  saveCfg();
+  const r = await apiPost('markDiambil', { row:p.row, name:p.name, obat:p.obat, petugas:petugas, catatan: catatan||'' });
+  if(!r.ok){ alert('Gagal menandai sudah diambil: ' + r.error); return; }
+  p.sudahDiambil = true;
+  p.petugasServah = petugas;
+  p.tglDiambil = new Date().toISOString().slice(0,10);
+  p.catatanServah = catatan||'';
+  render();
+}
   const r = await apiPost('markDiambil', { row:p.row, name:p.name, obat:p.obat, petugas:petugas, catatan: catatan||'' });
   if(!r.ok){ alert('Gagal menandai sudah diambil: ' + r.error); return; }
   p.sudahDiambil = true;
