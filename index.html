@@ -75,7 +75,7 @@ details.addform{background:var(--card);border:1px solid var(--line);border-radiu
 details.addform summary{padding:10px 18px;cursor:pointer;font-weight:600;font-size:.88rem;}
 .addform-body{padding:0 20px 20px;}
 .autocomplete{position:relative;}
-.ac-list{position:absolute;z-index:20;background:#fff;border:1px solid var(--line);border-radius:8px;max-height:220px;overflow:auto;width:100%;box-shadow:0 8px 20px rgba(0,0,0,.08);display:none;}
+.ac-list{position:absolute;z-index:20;background:#fff;border:1px solid var(--line);border-radius:8px;max-height:260px;overflow:auto;width:100%;min-width:100%;box-shadow:0 8px 20px rgba(0,0,0,.08);display:none;white-space:normal;word-break:break-word;}
 .ac-list div{padding:8px 12px;font-size:.83rem;cursor:pointer;}
 .ac-list div:hover{background:#EEF2FA;}
 
@@ -205,13 +205,14 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
                   <div><label>Nama pasien</label><input type="text" id="fName"></div>
                   <div><label>No. RM</label><input type="text" id="fRM"></div>
                 </div>
-                <div class="row2">
-                  <div class="autocomplete">
-                    <label>Nama obat <span class="hint" id="obatCount"></span></label>
-                    <input type="text" id="fObat" placeholder="Ketik untuk mencari dari daftar obat...">
-                    <div class="ac-list" id="acList"></div>
-                  </div>
-                  <div><label>Signa / aturan pakai</label><input type="text" id="fSigna" placeholder="mis. 1X1"></div>
+                <div class="autocomplete" style="margin-top:14px;margin-bottom:14px;">
+                  <label>Nama obat <span class="hint" id="obatCount"></span></label>
+                  <input type="text" id="fObat" placeholder="Ketik untuk mencari dari daftar obat...">
+                  <div class="ac-list" id="acList"></div>
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label>Signa / aturan pakai</label>
+                  <input type="text" id="fSigna" placeholder="mis. 1X1">
                 </div>
                 <div class="row2">
                   <div><label>Jml resep</label><input type="number" id="fJmlResep"></div>
