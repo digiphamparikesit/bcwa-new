@@ -238,10 +238,14 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
                   <div><label>Nama pasien</label><input type="text" id="fName"></div>
                   <div><label>No. RM</label><input type="text" id="fRM"></div>
                 </div>
-                <div class="autocomplete" style="margin-top:14px;margin-bottom:14px;">
+                <div class="autocomplete" style="margin-top:14px;margin-bottom:4px;">
                   <label>Nama obat <span class="hint" id="obatCount"></span></label>
-                  <input type="text" id="fObat" placeholder="Ketik untuk mencari dari daftar obat...">
+                  <input type="text" id="fObat" placeholder="Ketik obat (bisa lebih dari 1, pisahkan koma)">
                   <div class="ac-list" id="acList"></div>
+                </div>
+              <div class="hint" style="margin-bottom:14px; color:var(--teal);">
+          💡 <i>Tips: Jika pasien mendapat lebih dari 1 obat, ketik dengan pemisah koma (misal: <b>Paracetamol, Amoxicillin, OBH</b>)</i>
+         </div>
                 </div>
                 <div style="margin-bottom:14px;">
                   <label>Signa / aturan pakai</label>
@@ -2410,7 +2414,10 @@ el('laporanJenis').addEventListener('change', ()=>{ if(laporanState.rows.length)
 
 const fObat = el('fObat'), acList = el('acList');
 fObat.addEventListener('input', ()=>{
-  const q = fObat.value.toLowerCase().trim();
+  // Ambil kata terakhir setelah koma untuk memfilter autocomplete
+  const parts = fObat.value.split(',');
+  const q = parts[parts.length - 1].toLowerCase().trim();
+  
   if(!q){ acList.style.display='none'; return; }
   const matches = obatList.filter(o => (o.nama_obat||'').toLowerCase().includes(q)).slice(0,30);
   acList.innerHTML = matches.map(o => {
@@ -2420,9 +2427,17 @@ fObat.addEventListener('input', ()=>{
   }).join('');
   acList.style.display = matches.length ? 'block' : 'none';
 });
+
 acList.addEventListener('click', e=>{
   const v = e.target.getAttribute('data-val');
-  if(v){ fObat.value = v; acList.style.display='none'; }
+  if(v){
+    const parts = fObat.value.split(',');
+    // Ganti kata terakhir dengan nama obat yang dipilih, lalu tambahkan koma
+    parts[parts.length - 1] = ' ' + v;
+    fObat.value = parts.join(',').trim() + ', ';
+    acList.style.display='none';
+    fObat.focus(); // Fokus kembali ke input agar bisa langsung ketik obat selanjutnya
+  }
 });
 
 const fPetugasAktif = el('fPetugasAktif'), acPetugasList = el('acPetugasList');
@@ -2494,34 +2509,61 @@ document.addEventListener('click', e=>{
 });
 
 el('btnAddPatient').addEventListener('click', async ()=>{
+  el('btnAddPatient').addEventListener('click', async ()=>{
   const msg = el('addMsg'); msg.className = 'status-msg';
-  const data = {
-    name: el('fName').value.trim(),
-    rm: el('fRM').value.trim(),
-    obat: fObat.value.trim(),
-    signa: el('fSigna').value.trim(),
-    jmlResep: el('fJmlResep').value,
-    jmlDiberikan: el('fJmlDiberikan').value,
-    wa: el('fWA').value.trim(),
-    poli: el('fPoli').value.trim(),
-    tgl: el('fTglResep').value
-  };
-  if(!data.name || !data.wa || !data.obat){
+  
+  const namaPasien = el('fName').value.trim();
+  const obatInput = fObat.value.trim();
+  
+  if(!namaPasien || !el('fWA').value.trim() || !obatInput){
     msg.textContent = 'Nama, obat, dan No. WA wajib diisi.';
     msg.classList.add('status-err');
     return;
   }
-  msg.textContent = 'Menyimpan...';
-  const r = await apiPost('addPatient', data);
-  if(r.ok){
-    msg.textContent = 'Tersimpan ke Supabase.';
+
+  // Pisahkan obat berdasarkan koma, hapus spasi kosong, dan filter jika kosong
+  const obatArray = obatInput.split(',').map(o => o.trim()).filter(o => o !== '');
+
+  if(obatArray.length === 0){
+    msg.textContent = 'Minimal isi 1 nama obat.';
+    msg.classList.add('status-err');
+    return;
+  }
+
+  msg.textContent = `Menyimpan ${obatArray.length} obat...`;
+  let sukses = 0;
+  let gagal = 0;
+
+  // Looping untuk menyimpan setiap obat
+  for (const namaObat of obatArray) {
+    const data = {
+      name: namaPasien,
+      rm: el('fRM').value.trim(),
+      obat: namaObat,
+      signa: el('fSigna').value.trim(),
+      jmlResep: el('fJmlResep').value,
+      jmlDiberikan: el('fJmlDiberikan').value,
+      wa: el('fWA').value.trim(),
+      poli: el('fPoli').value.trim(),
+      tgl: el('fTglResep').value
+    };
+
+    const r = await apiPost('addPatient', data);
+    if(r.ok) sukses++;
+    else gagal++;
+  }
+
+  if(gagal === 0){
+    msg.textContent = `Berhasil menyimpan ${sukses} obat untuk pasien ini.`;
     msg.classList.add('status-ok');
+    // Bersihkan form
     ['fName','fRM','fSigna','fJmlResep','fJmlDiberikan','fWA','fPoli','fTglResep'].forEach(id => el(id).value = '');
     fObat.value = '';
     await refreshAll();
   } else {
-    msg.textContent = 'Gagal: ' + r.error;
+    msg.textContent = `Selesai dengan ${sukses} sukses, ${gagal} gagal. Cek console untuk detail.`;
     msg.classList.add('status-err');
+    await refreshAll();
   }
 });
 
