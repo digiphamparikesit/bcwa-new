@@ -134,7 +134,25 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 .report-summary .rs-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 18px;min-width:180px;}
 .report-summary .rs-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
 .report-summary .rs-value{font-family:'Space Grotesk';font-size:1.15rem;font-weight:600;margin-top:4px;color:var(--teal);}
-
+.obat-row{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px 14px;
+  margin-bottom:10px;
+  background:#FAFBFE;
+  position:relative;
+}
+.obat-row .obat-row-head{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;
+}
+.obat-row .obat-row-title{font-weight:600;font-size:.8rem;color:var(--teal);}
+.obat-row .btn-hapus-obat{
+  background:transparent;border:1px solid var(--stamp);color:var(--stamp);
+  padding:4px 10px;border-radius:6px;font-size:.75rem;
+}
+.obat-row .btn-hapus-obat:hover{background:var(--stamp);color:#fff;}
+.obat-row .row2{margin-top:8px;}
+  
 #printArea{display:none;}
 
 @media print{
@@ -2497,7 +2515,6 @@ acEditObat.addEventListener('click', e=>{
 });
 document.addEventListener('click', e=>{
   if(!e.target.closest('.autocomplete')){
-    acList.style.display='none';
     acPetugasList.style.display='none';
     acPetugasServahList.style.display='none';
     acPetugasGrupList.style.display='none';
