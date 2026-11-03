@@ -2083,7 +2083,8 @@ function renderLaporanRekapTabel(rows, namaBulan, tahun, judul){
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-
+  }
+  
 function printLaporan(){
   const bulan = Number(el('laporanBulan').value);
   const tahun = Number(el('laporanTahun').value);
