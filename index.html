@@ -1998,23 +1998,24 @@ function renderLaporanRekapTabel(rows, namaBulan, tahun, judul){
   const namaBulan = NAMA_BULAN[bulan-1];
   let csvContent = "";
   
-  // Fungsi pembantu untuk membungkus teks dengan tanda kutip jika ada koma
+  // Fungsi pembantu: Bungkus teks dengan kutip ganda, dan ganti koma di dalam teks jadi spasi
   const escCsv = (str) => {
     if(str === null || str === undefined) str = '';
-    str = String(str).replace(/"/g, '""'); // Escape tanda kutip
-    return `"${str}"`;
+    let s = String(str).replace(/"/g, '""'); // Escape kutip
+    s = s.replace(/,/g, ' '); // Ganti koma di dalam data jadi spasi agar tidak merusak kolom
+    return `"${s}"`;
   };
 
   // Judul Laporan
-  csvContent += `Laporan Farmasi RSUD AM Parikesit\n`;
-  csvContent += `Jenis Laporan: ${laporanState.judul}\n`;
-  csvContent += `Periode: ${namaBulan} ${tahun}\n\n`;
+  csvContent += `"Laporan Farmasi RSUD AM Parikesit"\n`;
+  csvContent += `"Jenis Laporan: ${laporanState.judul}"\n`;
+  csvContent += `"Periode: ${namaBulan} ${tahun}"\n\n`;
 
   if(laporanState.isRekap){
-    // --- HEADER UNTUK TABEL REKAP ---
-    csvContent += "No,Nama Obat,Satuan Jual,Jumlah Pasien Menunggu,Total Sisa (Kebutuhan),Harga Satuan,Estimasi Biaya\n";
+    // HEADER REKAP
+    csvContent += "No;Nama Obat;Satuan Jual;Jumlah Pasien Menunggu;Total Sisa (Kebutuhan);Harga Satuan;Estimasi Biaya\n";
     
-    // --- ISI DATA REKAP ---
+    // ISI DATA REKAP
     laporanState.rows.forEach((r, i) => {
       csvContent += [
         (i+1),
@@ -2024,19 +2025,19 @@ function renderLaporanRekapTabel(rows, namaBulan, tahun, judul){
         escCsv(r.totalSisa),
         escCsv(r.harga),
         escCsv(r.estimasiBiaya)
-      ].join(",") + "\n";
+      ].join(";") + "\n";
     });
 
-    // --- BARIS TOTAL REKAP ---
+    // BARIS TOTAL REKAP
     const t = laporanState.totals;
-    csvContent += `,,,,,,\n`;
-    csvContent += `TOTAL,,,,${escCsv(t.sumPasien||0)},${escCsv(t.sumSisa||0)},-,${escCsv(t.sumEstimasi||0)}\n`;
+    csvContent += `;;;;;\n`;
+    csvContent += `TOTAL;;;;${escCsv(t.sumPasien||0)};${escCsv(t.sumSisa||0)};-;${escCsv(t.sumEstimasi||0)}\n`;
 
   } else {
-    // --- HEADER UNTUK TABEL DETAIL PASIEN ---
-    csvContent += "No,Tgl Resep,No. RM,Nama Pasien,Nama Obat,Signa,Resep,Diberi,Sisa,Harga,Estimasi,Poli,Status\n";
+    // HEADER DETAIL PASIEN
+    csvContent += "No;Tgl Resep;No. RM;Nama Pasien;Nama Obat;Signa;Resep;Diberi;Sisa;Harga;Estimasi;Poli;Status\n";
     
-    // --- ISI DATA DETAIL ---
+    // ISI DATA DETAIL
     laporanState.rows.forEach((p, i) => {
       const resep = Number(p.jmlResep) || 0;
       const diberi = Number(p.jmlDiberikan) || 0;
@@ -2060,22 +2061,22 @@ function renderLaporanRekapTabel(rows, namaBulan, tahun, judul){
         escCsv(estimasi),
         escCsv(p.poli),
         escCsv(status)
-      ].join(",") + "\n";
+      ].join(";") + "\n";
     });
 
-    // --- BARIS TOTAL DETAIL ---
+    // BARIS TOTAL DETAIL
     const t = laporanState.totals;
-    csvContent += `,,,,,,,,\n`;
-    csvContent += `TOTAL,,,,,,${escCsv(t.sumResep||0)},${escCsv(t.sumDiberi||0)},${escCsv(t.sumSisa||0)},-,${escCsv(t.sumEstimasi||0)},,\n`;
+    csvContent += `;;;;;;;;\n`;
+    csvContent += `TOTAL;;;;;;${escCsv(t.sumResep||0)};${escCsv(t.sumDiberi||0)};${escCsv(t.sumSisa||0)};-;${escCsv(t.sumEstimasi||0)};;\n`;
   }
 
-  // Proses Download (Tambah \uFEFF agar Excel otomatis memisahkan kolom)
-  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+  // Proses Download (Ganti type ke application/vnd.ms-excel dan pakai titik koma)
+  const blob = new Blob(["\uFEFF" + csvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   
-  // Nama file dinamis berdasarkan jenis laporan dan bulan
-  const fileName = `Laporan_Farmasi_${laporanState.jenis}_${namaBulan}_${tahun}.csv`;
+  // Ubah ekstensi menjadi .xls agar Excel langsung membacanya sebagai tabel
+  const fileName = `Laporan_Farmasi_${laporanState.jenis}_${namaBulan}_${tahun}.xls`;
   
   link.setAttribute("href", url);
   link.setAttribute("download", fileName);
