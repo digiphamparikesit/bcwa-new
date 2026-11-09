@@ -558,6 +558,18 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
             </div>
             <div></div>
           </div>
+          <!-- TAMBAHKAN FILTER RENTANG TANGGAL DI SINI -->
+          <div class="row2" style="margin-bottom:12px;">
+            <div>
+              <label style="font-weight:500;font-size:.76rem;color:var(--muted);margin:0 0 4px;">Dari Tanggal (Opsional)</label>
+              <input type="date" id="laporanDariTgl" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:.85rem;">
+            </div>
+            <div>
+              <label style="font-weight:500;font-size:.76rem;color:var(--muted);margin:0 0 4px;">Sampai Tanggal (Opsional)</label>
+              <input type="date" id="laporanSampaiTgl" style="width:100%;padding:9px 11px;border:1.5px solid var(--line);border-radius:8px;font-size:.85rem;">
+            </div>
+          </div>
+
           <div class="row3">
             <div>
               <label style="font-weight:500;font-size:.76rem;color:var(--muted);margin:0 0 4px;">Bulan</label>
@@ -586,7 +598,7 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
               <button class="btn-primary" id="btnDownloadExcel" style="flex:1; background:#1D6F42; color:#fff; border:none;">📥 Download Excel</button>
             </div>
           </div>
-          <div class="hint" style="margin-top:6px;">Filter berdasarkan kolom <b>tgl_resep</b>. Print size: F4 Landscape (330 × 210 mm).</div>
+          <div class="hint" style="margin-top:6px;">Jika tanggal <b>Dari</b> dan <b>Sampai</b> dikosongkan, laporan akan otomatis mengambil data 1 bulan penuh sesuai bulan & tahun yang dipilih. Print size: F4 Landscape (330 × 210 mm).</div>
         </div>
 
         <div class="wa-right" style="flex:1;">
@@ -999,12 +1011,19 @@ async function apiGet(action, extra){
       }
       return { ok:true, data: all };
     }
-    case 'getLaporanBulanan': {
+        case 'getLaporanBulanan': {
       const tahun = String(extra.tahun || '').padStart(4,'0');
       const bulan = String(extra.bulan || '').padStart(2,'0');
-      const dari = `${tahun}-${bulan}-01`;
+      
+      // Default tanggal awal dan akhir bulan
+      let dari = `${tahun}-${bulan}-01`;
       const akhirBulan = new Date(Number(tahun), Number(bulan), 0).getDate();
-      const sampai = `${tahun}-${bulan}-${String(akhirBulan).padStart(2,'0')}`;
+      let sampai = `${tahun}-${bulan}-${String(akhirBulan).padStart(2,'0')}`;
+
+      // Jika user mengisi filter rentang tanggal, timpa nilai default
+      if(extra.dariTgl) dari = extra.dariTgl;
+      if(extra.sampaiTgl) sampai = extra.sampaiTgl;
+
       let all = [];
       let from = 0;
       const PAGE = 1000;
@@ -1023,10 +1042,6 @@ async function apiGet(action, extra){
       }
       return { ok:true, data: all };
     }
-    default:
-      return { ok:false, error:'Unknown action: ' + action };
-  }
-}
 
 async function apiPost(action, data){
   data = data || {};
@@ -1802,6 +1817,9 @@ async function loadLaporan(){
   const jenis = el('laporanJenis').value;
   const bulan = Number(el('laporanBulan').value);
   const tahun = Number(el('laporanTahun').value);
+  const dariTgl = el('laporanDariTgl').value;
+  const sampaiTgl = el('laporanSampaiTgl').value;
+
   if(!bulan || !tahun){ alert('Isi bulan dan tahun.'); return; }
 
   el('emptyStateLaporan').style.display = 'none';
@@ -1810,7 +1828,7 @@ async function loadLaporan(){
   el('tfootLaporan').innerHTML = '';
   el('laporanSummary').innerHTML = '';
 
-  const r = await apiGet('getLaporanBulanan', { bulan, tahun });
+  const r = await apiGet('getLaporanBulanan', { bulan, tahun, dariTgl, sampaiTgl });
   if(!r.ok){ alert('Gagal memuat laporan: ' + r.error); laporanRows = []; }
   else laporanRows = r.data;
 
