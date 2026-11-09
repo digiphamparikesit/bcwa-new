@@ -1011,16 +1011,14 @@ async function apiGet(action, extra){
       }
       return { ok:true, data: all };
     }
-        case 'getLaporanBulanan': {
+          case 'getLaporanBulanan': {
       const tahun = String(extra.tahun || '').padStart(4,'0');
       const bulan = String(extra.bulan || '').padStart(2,'0');
       
-      // Default tanggal awal dan akhir bulan
       let dari = `${tahun}-${bulan}-01`;
       const akhirBulan = new Date(Number(tahun), Number(bulan), 0).getDate();
       let sampai = `${tahun}-${bulan}-${String(akhirBulan).padStart(2,'0')}`;
 
-      // Jika user mengisi filter rentang tanggal, timpa nilai default
       if(extra.dariTgl) dari = extra.dariTgl;
       if(extra.sampaiTgl) sampai = extra.sampaiTgl;
 
@@ -1042,6 +1040,10 @@ async function apiGet(action, extra){
       }
       return { ok:true, data: all };
     }
+      default:
+      return { ok:false, error:'Unknown action: ' + action };   
+  }
+}
 
 async function apiPost(action, data){
   data = data || {};
