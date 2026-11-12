@@ -156,6 +156,14 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
 
 #printArea{display:none;}
 
+  /* CSS untuk Fitur Buka Lipat */
+.patient-group-row { background: #ffffff; border-top: 2px solid var(--teal); }
+.patient-group-row td { background: #F8FAFD; }
+.detail-row { background: #ffffff; display: none; }
+.detail-row.show { display: table-row; }
+.btn-toggle-obat { background: var(--teal); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; border: none; margin-top: 4px;}
+.btn-toggle-obat:hover { background: var(--teal-dark); }
+  
 @media print{
   @page{ size: 330mm 210mm; margin: 8mm 8mm 8mm 8mm; }
   html,body{height:auto !important;overflow:visible !important;background:#fff !important;}
@@ -453,7 +461,7 @@ footer.note{max-width:1150px;margin:16px auto 40px;padding:0 24px;color:var(--mu
           <div class="wa-right">
             <div class="table-wrap">
               <table>
-                <thead><tr><th id="thGrupPasien" class="sortable-th">Pasien</th><th id="thGrupObat" class="sortable-th">Obat</th><th id="thGrupResep" class="sortable-th">Resep</th><th id="thGrupDiberi" class="sortable-th">Diberi</th><th id="thGrupSisa" class="sortable-th">Sisa</th><th id="thGrupNoWA" class="sortable-th">No. WA</th><th id="thGrupPoli" class="sortable-th">Poli / Tanggal</th><th id="thGrupStatus" class="sortable-th">Status Pengambilan</th><th id="thGrupCatatan" class="sortable-th">Catatan</th><th>Aksi</th></tr></thead>
+                <thead><tr><th id="thGrupPasien" class="sortable-th" style="width: 25%;">Pasien</th><th id="thGrupObat" class="sortable-th">Obat</th><th id="thGrupResep" class="sortable-th">Resep</th><th id="thGrupDiberi" class="sortable-th">Diberi</th><th id="thGrupSisa" class="sortable-th">Sisa</th><th id="thGrupNoWA" class="sortable-th">No. WA</th><th id="thGrupPoli" class="sortable-th">Poli / Tanggal</th><th id="thGrupStatus" class="sortable-th">Status Pengambilan</th><th id="thGrupCatatan" class="sortable-th">Catatan</th><th>Aksi</th></tr></thead>
                 <tbody id="tableBodyGrup"></tbody>
               </table>
               <div class="empty-state" id="emptyStateGrup" style="display:none">Tidak ada data yang cocok.</div>
@@ -1491,53 +1499,86 @@ function renderTableGrup(){
   const q = el('searchInputGrup').value.toLowerCase().trim();
   const qObat = el('searchInputGrupObat').value.toLowerCase().trim();
   const status = el('filterStatusGrup').value;
-  let rows = patients.filter(p=>{
+  
+  let rawRows = patients.filter(p=>{
     if(status === 'pending' && isDiambil(p)) return false;
     if(status === 'done' && !isDiambil(p)) return false;
     if(q && !(p.name.toLowerCase().includes(q) || String(p.rm||'').toLowerCase().includes(q))) return false;
     if(qObat && !(p.obat||'').toLowerCase().includes(qObat)) return false;
     return true;
   });
-  rows = applySort(rows, grupSort, grupColumns);
-  updateSortHeaders(grupColumns, grupSort);
-  el('emptyStateGrup').style.display = rows.length ? 'none' : 'block';
-  const totalPagesGrup = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+
+  const grouped = {};
+  rawRows.forEach(p => {
+    const key = p.rm ? p.rm : p.name;
+    if(!grouped[key]) {
+      grouped[key] = { name: p.name, rm: p.rm, poli: p.poli, wa: p.wa, tgl: p.tgl, items: [] };
+    }
+    grouped[key].items.push(p);
+  });
+
+  let groupedRows = Object.values(grouped).sort((a, b) => (a.name||'').localeCompare(b.name||''));
+
+  el('emptyStateGrup').style.display = groupedRows.length ? 'none' : 'block';
+  
+  const totalPagesGrup = Math.max(1, Math.ceil(groupedRows.length / PAGE_SIZE));
   if(grupPage > totalPagesGrup) grupPage = totalPagesGrup;
   if(grupPage < 1) grupPage = 1;
-  const pageRowsGrup = rows.slice((grupPage-1)*PAGE_SIZE, grupPage*PAGE_SIZE);
-  el('tableBodyGrup').innerHTML = pageRowsGrup.map(p=>`
-    <tr class="${isDiambil(p)?'sent':''}">
-      <td><div class="pname">${escapeHtml(p.name)}</div><div class="psub">${p.rm?'RM '+escapeHtml(p.rm):''}</div></td>
-      <td><div>${escapeHtml(p.obat)}</div><div class="psub">${escapeHtml(p.signa)}</div></td>
-      <td class="psub">${p.jmlResep!==''&&p.jmlResep!=null?p.jmlResep:'—'}</td>
-      <td>
-        ${isDiambil(p) ? `<div class="psub">${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:'—'} <span title="Terkunci">🔒</span></div>` : `
-        <div class="inline-edit">
-          <input type="number" class="jmldiberikan-input" data-row="${p.row}" value="${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:''}" style="width:64px;">
-          <button class="btn-mini undo" data-savejmldiberikan="${p.row}">Simpan</button>
-        </div>`}
-      </td>
-      <td class="psub">${p.sisa!==''&&p.sisa!=null?p.sisa:'—'}</td>
-      <td class="pwa">${p.wa?'+'+p.wa:'—'}</td>
-      <td><div>${escapeHtml(p.poli)}</div><div class="psub">${escapeHtml(p.tgl)}</div></td>
-      <td>${isDiambil(p)?'<span class="stamp">DIAMBIL</span><div class="psub">'+escapeHtml(p.petugasServah||'')+(p.tglDiambil?' · '+escapeHtml(p.tglDiambil):'')+'</div>':'<span class="status-pill status-pending">Menunggu diambil</span>'}</td>
-      <td>
-        <div class="inline-edit">
-          <input type="text" class="catatan-servah-input" data-row="${p.row}" value="${escapeHtml(p.catatanServah||'')}" placeholder="Catatan (opsional)" style="width:150px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);font-size:.76rem;">
-          <button class="btn-mini undo" data-savecatatanservah="${p.row}">Simpan</button>
-        </div>
-      </td>
-      <td class="row-actions">
-        ${!isDiambil(p)?`<button class="btn-mini wa" data-diambil="${p.row}">Sudah Diambil</button>`:`<button class="btn-mini undo" data-undodiambil="${p.row}">Batalkan</button>`}
-        <button class="btn-mini undo" data-edit="${p.row}">Edit</button>
-        <button class="btn-mini danger" data-delete="${p.row}">Hapus</button>
-      </td>
-    </tr>`).join('');
+  const pageRowsGrup = groupedRows.slice((grupPage-1)*PAGE_SIZE, grupPage*PAGE_SIZE);
+
+  let html = '';
+  pageRowsGrup.forEach((grup, index) => {
+    const groupId = 'group-' + (grup.rm || index);
+    const totalObat = grup.items.length;
+    const allDiambil = grup.items.every(isDiambil);
+
+    html += `
+      <tr class="patient-group-row">
+        <td>
+          <div class="pname">${escapeHtml(grup.name)}</div>
+          <div class="psub">${grup.rm?'RM '+escapeHtml(grup.rm):''}</div>
+          <button class="btn-toggle-obat" onclick="toggleGroup('${groupId}')">[+] Lihat ${totalObat} Obat</button>
+        </td>
+        <td colspan="2"><b>${totalObat} Macam Obat</b></td>
+        <td colspan="3"><div>${escapeHtml(grup.poli)}</div><div class="psub">${escapeHtml(grup.tgl)}</div></td>
+        <td colspan="3">${allDiambil ? '<span class="stamp">SEMUA DIAMBIL</span>' : '<span class="status-pill status-pending">Ada Obat Belum Diambil</span>'}</td>
+        <td></td>
+      </tr>
+    `;
+
+    grup.items.forEach(p => {
+      html += `
+        <tr class="detail-row" id="${groupId}">
+          <td></td>
+          <td><div>${escapeHtml(p.obat)}</div><div class="psub">${escapeHtml(p.signa)}</div></td>
+          <td class="psub">${p.jmlResep!==''&&p.jmlResep!=null?p.jmlResep:'—'}</td>
+          <td>${isDiambil(p) ? `<div class="psub">${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:'—'} 🔒</div>` : `<div class="inline-edit"><input type="number" class="jmldiberikan-input" data-row="${p.row}" value="${p.jmlDiberikan!==''&&p.jmlDiberikan!=null?p.jmlDiberikan:''}" style="width:64px;"><button class="btn-mini undo" data-savejmldiberikan="${p.row}">Simpan</button></div>`}</td>
+          <td class="psub">${p.sisa!==''&&p.sisa!=null?p.sisa:'—'}</td>
+          <td class="pwa">${p.wa?'+'+p.wa:'—'}</td>
+          <td>${isDiambil(p) ? '<span class="stamp">DIAMBIL</span><div class="psub">'+escapeHtml(p.petugasServah||'')+(p.tglDiambil?' · '+escapeHtml(p.tglDiambil):'')+'</div>' : '<span class="status-pill status-pending">Belum diambil</span>'}</td>
+          <td><div class="inline-edit"><input type="text" class="catatan-servah-input" data-row="${p.row}" value="${escapeHtml(p.catatanServah||'')}" placeholder="Catatan" style="width:120px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);font-size:.76rem;"><button class="btn-mini undo" data-savecatatanservah="${p.row}">Simpan</button></div></td>
+          <td class="row-actions">${!isDiambil(p)?`<button class="btn-mini wa" data-diambil="${p.row}">Ambil Obat Ini</button>`:`<button class="btn-mini undo" data-undodiambil="${p.row}">Batalkan</button>`}</td>
+        </tr>
+      `;
+    });
+  });
+
+  el('tableBodyGrup').innerHTML = html;
   el('paginationGrup').innerHTML = `
     <button ${grupPage<=1?'disabled':''} data-pageprev="grup">‹ Sebelumnya</button>
-    <span>Halaman ${grupPage} dari ${totalPagesGrup} (${rows.length} pasien)</span>
+    <span>Halaman ${grupPage} dari ${totalPagesGrup} (${groupedRows.length} pasien)</span>
     <button ${grupPage>=totalPagesGrup?'disabled':''} data-pagenext="grup">Berikutnya ›</button>`;
 }
+
+window.toggleGroup = function(groupId) {
+  const rows = document.querySelectorAll('#' + groupId);
+  if(rows.length === 0) return;
+  const isHidden = rows[0].style.display !== 'table-row';
+  rows.forEach(row => { row.style.display = isHidden ? 'table-row' : 'none'; });
+  const btn = document.querySelector(`button[onclick="toggleGroup('${groupId}')"]`);
+  if(btn) { btn.textContent = isHidden ? '[-] Tutup Obat' : `[+] Lihat ${rows.length} Obat`; }
+};
+  
 async function loadRiwayat(){
   el('emptyStateRiwayat').style.display = 'none';
   el('tableBodyRiwayat').innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--muted);">Memuat riwayat...</td></tr>';
